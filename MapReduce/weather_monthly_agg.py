@@ -64,8 +64,15 @@ class WeatherMonthlyAgg(MRJob):
             total_prec += prec
             count += c
 
-        avg_tmax = total_tmax / count if count else 0
-        avg_tmin = total_tmin / count if count else 0
+        if count:
+            avg_tmax = total_tmax / count
+        else:
+            avg_tmax = 0
+        
+        if count:
+            avg_tmin = total_tmin / count
+        else:
+            avg_tmin = 0
 
         city, year_month = key.split("|")
 
