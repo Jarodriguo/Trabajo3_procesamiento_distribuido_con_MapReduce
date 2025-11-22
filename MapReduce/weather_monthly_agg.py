@@ -7,8 +7,8 @@ from datetime import datetime
 
 class WeatherMonthlyAgg(MRJob):
 
-    # Leer líneas tal como vienen (raw), sin intentar parseo automático
     INPUT_PROTOCOL = RawValueProtocol
+    OUTPUT_PROTOCOL = RawValueProtocol  # ← Para eliminar null y comillas
 
     def mapper(self, _, line):
 
@@ -48,7 +48,6 @@ class WeatherMonthlyAgg(MRJob):
 
         key = f"{city}|{year_month}"
 
-        # Emitimos datos crudos para agregación
         yield key, (tmax, tmin, prec, 1)
 
     def reducer(self, key, values):
@@ -76,10 +75,10 @@ class WeatherMonthlyAgg(MRJob):
 
         city, year_month = key.split("|")
 
-        # CSV limpio final
+        # CSV limpio final (sin comillas, sin null)
         result = f"{city},{year_month},{avg_tmax:.2f},{avg_tmin:.2f},{total_prec:.2f}"
 
-        yield None, result
+        yield "", result  # CLAVE VACÍA → compatible con RawValueProtocol
 
 
 if __name__ == "__main__":
