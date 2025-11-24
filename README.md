@@ -49,7 +49,7 @@ hadoop fs -cp s3://scelisl-emr/data/*.csv /user/hadoop/data/
 **Ejecutar MapReduce:** 
 python3 weather_monthly_agg.py -r hadoop hdfs:///user/hadoop/data/*.csv --output-dir hdfs:///user/hadoop/weather_output
 
-**Consolidar el resultado**
+**Consolidar el resultado:**
 hdfs dfs -cat /user/hadoop/weather_output/part-* > weather_agg.csv.
 
 Aquí lo que hacemos es unificar el proceso de Map Reduce a un solo archivo
