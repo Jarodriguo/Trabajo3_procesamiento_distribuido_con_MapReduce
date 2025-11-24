@@ -25,22 +25,6 @@ Para que todo esto funcionara, usamos varios servicios y herramientas clave:
 
 - Entrega de Resultados: Archivo de CSV integrado y unificado luego de ejecutarse el proceso de Map Reduce.
 
-### Estructura del Repositorio
-
-├── api/                             # Código de la API (FastAPI)
-│   ├── main.py                      # Aquí definimos los endpoints
-│   ├── utils.py                     # Funciones de ayuda
-│   └── __init__.py                  
-├── data/                            # Datos de entrada originales
-│   └── raw/
-│       ├── bogota.csv
-│       └── ...
-├── MapReduce/                       # Scripts para el job MapReduce
-│   └── weather_monthly_agg.py       # Nuestro algoritmo MapReduce (con MRJob)
-├── .gitignore
-├── README.md
-└── requirements.txt                 # Dependencias (fastapi, uvicorn, mrjob, etc.)
-
 ## Los Comandos Clave
 
 Estos son los comandos esenciales para levantar el ambiente y correr el procesamiento. Se asume que el clúster EMR está creado y los datos en S3.
