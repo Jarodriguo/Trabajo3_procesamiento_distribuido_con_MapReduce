@@ -11,7 +11,7 @@ Archivos Procesados: Datos de [Clima/Temperaturas/Ventas, etc.] para cinco ciuda
 
 **Estos fueron procesados en formato CSV.**
 
-## Tecnológías 
+## Tecnologías 
 
 Para que todo esto funcionara, usamos varios servicios y herramientas clave:
 
