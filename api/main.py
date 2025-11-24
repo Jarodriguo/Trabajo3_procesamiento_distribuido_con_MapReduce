@@ -1,43 +1,58 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
-from api.utils import load_data, get_cities
+from utils import load_data, get_cities
 import os
 
 app = FastAPI(
-    title="API de Datos Meteorológicos (MapReduce)",
-    description="Exposición del resultado procesado con Hadoop MapReduce",
-    version="1.0"
+    title="API de Datos Meteorológicos (MapReduce + HDFS + S3)",
+    description="Expone los resultados agregados generados por MapReduce desde HDFS o S3",
+    version="2.0"
 )
 
+# Archivo local opcional
 RESULT_FILE = os.path.join(os.path.dirname(__file__), "data", "resultado.csv")
 
 
 @app.get("/")
 def root():
-    return {"status": "OK", "message": "API funcionando correctamente"}
+    return {
+        "status": "OK",
+        "message": "API funcionando correctamente",
+        "endpoints": [
+            "/cities",
+            "/city/{city}",
+            "/city/{city}/{year_month}",
+            "/download/csv"
+        ]
+    }
 
 
 @app.get("/cities")
-def list_cities():
-    cities = get_cities()
-    return {"cities": cities}
+def list_cities(source: str = Query("hdfs", enum=["hdfs", "s3", "local"])):
+    cities = get_cities(source)
+    return {"source": source, "cities": cities}
 
 
 @app.get("/city/{city}")
-def get_city(city: str):
-    data = load_data()
+def get_city(city: str, source: str = Query("hdfs", enum=["hdfs", "s3", "local"])):
+    data = load_data(source)
+
     filtered = [d for d in data if d["city"].lower() == city.lower()]
+
     if not filtered:
         raise HTTPException(status_code=404, detail="Ciudad no encontrada")
-    return filtered
+
+    return {"source": source, "records": filtered}
 
 
 @app.get("/city/{city}/{year_month}")
-def get_city_by_month(city: str, year_month: str):
-    data = load_data()
+def get_city_by_month(city: str, year_month: str,
+                      source: str = Query("hdfs", enum=["hdfs", "s3", "local"])):
+    data = load_data(source)
+
     for d in data:
         if d["city"].lower() == city.lower() and d["month"] == year_month:
-            return d
+            return {"source": source, "data": d}
 
     raise HTTPException(404, "Registro no encontrado")
 
@@ -51,18 +66,3 @@ def download_csv():
         media_type="text/csv",
         filename="resultado.csv"
     )
-
-@app.get("/city/{city}/year/{year}")
-def get_city_by_year(city: str, year: str):
-    data = load_data()
-
-    # Filtrar registros donde el mes empieza por el año
-    filtered = [
-        d for d in data
-        if d["city"].lower() == city.lower() and d["month"].startswith(year)
-    ]
-
-    if not filtered:
-        raise HTTPException(status_code=404, detail="Registro no encontrado")
-
-    return filtered
