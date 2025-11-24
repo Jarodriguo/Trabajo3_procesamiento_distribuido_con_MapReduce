@@ -1,68 +1,78 @@
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
-from utils import load_data, get_cities
 import os
-
-app = FastAPI(
-    title="API de Datos Meteorológicos (MapReduce + HDFS + S3)",
-    description="Expone los resultados agregados generados por MapReduce desde HDFS o S3",
-    version="2.0"
+from utils import (
+    load_data_from_s3,
+    load_data_from_hdfs,
+    extract_cities
 )
 
-# Archivo local opcional
-RESULT_FILE = os.path.join(os.path.dirname(__file__), "data", "resultado.csv")
+app = FastAPI(
+    title="API Meteorológica – EMR MapReduce",
+    version="1.0",
+    description="Lectura de datos agregados desde S3 y HDFS"
+)
+
+S3_BUCKET = "scelisl-emr"
+S3_KEY = "output/weather_agg.csv"
+
+HDFS_PATH = "/user/hadoop/weather_output_combined/weather_agg.csv"
+
+
+def load_from_s3():
+    try:
+        return load_data_from_s3(S3_BUCKET, S3_KEY)
+    except Exception as e:
+        raise HTTPException(500, f"Error leyendo S3: {e}")
+
+
+def load_from_hdfs():
+    try:
+        return load_data_from_hdfs(HDFS_PATH)
+    except Exception as e:
+        raise HTTPException(500, f"Error leyendo HDFS: {e}")
 
 
 @app.get("/")
 def root():
-    return {
-        "status": "OK",
-        "message": "API funcionando correctamente",
-        "endpoints": [
-            "/cities",
-            "/city/{city}",
-            "/city/{city}/{year_month}",
-            "/download/csv"
-        ]
-    }
+    return {"status": "OK", "message": "API funcionando correctamente"}
 
 
 @app.get("/cities")
-def list_cities(source: str = Query("hdfs", enum=["hdfs", "s3", "local"])):
-    cities = get_cities(source)
-    return {"source": source, "cities": cities}
+def get_cities():
+    data = load_from_hdfs()
+    return {"cities": extract_cities(data)}
 
 
 @app.get("/city/{city}")
-def get_city(city: str, source: str = Query("hdfs", enum=["hdfs", "s3", "local"])):
-    data = load_data(source)
-
+def city_data(city: str):
+    data = load_from_hdfs()
     filtered = [d for d in data if d["city"].lower() == city.lower()]
 
     if not filtered:
-        raise HTTPException(status_code=404, detail="Ciudad no encontrada")
+        raise HTTPException(404, "Ciudad no encontrada")
 
-    return {"source": source, "records": filtered}
+    return filtered
 
 
 @app.get("/city/{city}/{year_month}")
-def get_city_by_month(city: str, year_month: str,
-                      source: str = Query("hdfs", enum=["hdfs", "s3", "local"])):
-    data = load_data(source)
+def city_by_month(city: str, year_month: str):
+    data = load_from_hdfs()
 
     for d in data:
         if d["city"].lower() == city.lower() and d["month"] == year_month:
-            return {"source": source, "data": d}
+            return d
 
     raise HTTPException(404, "Registro no encontrado")
 
 
-@app.get("/download/csv")
-def download_csv():
-    if not os.path.exists(RESULT_FILE):
-        raise HTTPException(status_code=404, detail="Archivo no encontrado")
-    return FileResponse(
-        RESULT_FILE,
-        media_type="text/csv",
-        filename="resultado.csv"
-    )
+@app.get("/source/s3")
+def test_s3():
+    """Verifica lectura desde S3."""
+    return load_from_s3()[:5]
+
+
+@app.get("/source/hdfs")
+def test_hdfs():
+    """Verifica lectura desde HDFS."""
+    return load_from_hdfs()[:5]
